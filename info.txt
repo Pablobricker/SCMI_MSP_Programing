@@ -1,0 +1,22 @@
+Connections (MSP430FR5969 <-> STM32F407G)
+P1.3 <-> BOOT0      
+P1.4 <-> PB2 (BOOT1)          
+P1.5 <-> NRST
+P2.5 <-> PB11
+P2.6 <-> PB10
+
+MSP430FR5969 to FRAM Connections
+P1.6 <-> MOSI
+P1.7 <-> MISO
+P2.2 <-> CLK
+P1.2 <-> CS
+
+
+Info: La versión 2 (v2) contiene la integración de todos los
+avances hasta el momento (09SEP2022) funciona correctamente
+a excepción de la interfaz con la memoria FRAM
+
+También se probaron el RTC y el LPM y funciona correctamente.
+
+-Falta por probar el eUSCIA0
+-Falta por corregir lo referente a la interfaz con la FRAM 
