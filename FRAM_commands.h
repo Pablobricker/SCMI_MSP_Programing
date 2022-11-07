@@ -9,6 +9,8 @@
 #define SLEEP  0xB9
 #define RDID   0x9F
 
+//Probando que git funcione bien esto es la ramab 
+
 //MSP SPI-MOSI P1.6 <-> 51 o ICSP-4
 //MSP SPI-MISO P.1.7 <-> 50 o ICSP-1
 //MSP SPI-CLK P2.2 <-> 52 o ICSP-3
