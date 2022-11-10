@@ -9,24 +9,27 @@
 #define SLEEP  0xB9
 #define RDID   0x9F
 
-//Probando que git funcione bien esto es la ramab 
-
 //MSP SPI-MOSI P1.6 <-> 51 o ICSP-4
 //MSP SPI-MISO P.1.7 <-> 50 o ICSP-1
 //MSP SPI-CLK P2.2 <-> 52 o ICSP-3
 //MSP SPI-SS P1.3 <-> 53 o
+// Prueba funciona bien
 
-int FRAM_dataW[]={0x05,0x08,0x2,0x03};
+int FRAM_dataW[]={0xF0,0xFF,0xFF,0x0F};
 uint32_t FRAM_dataR[4];
+
+void divisor_byte(){
+    eUSCIB0_CS1_set_state(1);
+    _delay_cycles(200);
+    eUSCIB0_CS1_set_state(0);
+}
 
 void FRAM_write(int ADDRESS_1,int ADDRESS_2,int ADDRESS_3,int Nbytes){
     unsigned int i;
     eUSCIB0_CS1_set_state(0); //CS LOW
     eUSCIB0_SPI_writeByte(WREN);
     eUSCIB0_CS1_set_state(1);
-
-    //_delay_cycles(100);
-
+    _delay_cycles(10);
     eUSCIB0_CS1_set_state(0);
     eUSCIB0_SPI_writeByte(WRITE);
     eUSCIB0_SPI_writeByte(ADDRESS_1);
@@ -45,7 +48,8 @@ void FRAM_read(int ADDRESS_1,int ADDRESS_2,int ADDRESS_3,int Nbytes){
     eUSCIB0_SPI_writeByte(ADDRESS_1);
     eUSCIB0_SPI_writeByte(ADDRESS_2);
     eUSCIB0_SPI_writeByte(ADDRESS_3);
-    for(i=0;i<=Nbytes;i++){
+    for(i=0;i<=Nbytes-1;i++){
+        eUSCIB0_SPI_writeByte(0xFF); //Sigue escribiendo para mantener el reloj en funcionamiento
         FRAM_dataR[i] = eUSCIB0_SPI_readByte();
     }
     eUSCIB0_CS1_set_state(1);
