@@ -2,7 +2,7 @@
 
 //Pruebaaaa Funciona bien
 
-void eUSCIB0_CS1_set_state(int a);
+void eUSCIB0_CS1_set_state(uint8_t a);
 
 void eUSCIB0_SPI_init(){
     UCB0CTLW0 = UCSWRST; //resetea el modulo USCI
@@ -37,8 +37,8 @@ void eUSCIB0_SPI_writeByte(int dato){
     while((UCB0STATW & UCBUSY) == UCBUSY){}
 }
 
-int eUSCIB0_SPI_readByte(){
-    int dato = 0;
+uint8_t eUSCIB0_SPI_readByte(){
+    uint8_t dato = 0;
     _delay_cycles(100);
     while((UCB0STATW & UCBUSY) == UCBUSY){} //esperar mientras el buffer de escritura no este lleno.
     dato = UCB0RXBUF;
@@ -46,7 +46,7 @@ int eUSCIB0_SPI_readByte(){
     return dato;
 }
 
-void eUSCIB0_CS1_set_state(int a){
+void eUSCIB0_CS1_set_state(uint8_t a){
     if (a==0) P1OUT &= ~BIT2; //CS = LOW
     if (a==1) P1OUT |= BIT2; //CS = HIGH
 }

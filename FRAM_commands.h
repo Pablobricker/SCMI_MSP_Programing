@@ -15,8 +15,8 @@
 //MSP SPI-SS P1.3 <-> 53 o
 // Prueba funciona bien
 
-int FRAM_dataW[]={0xF0,0xFF,0xFF,0x0F};
-uint32_t FRAM_dataR[4];
+uint8_t FRAM_dataW[]={0xF0,0xFF,0xFF,0x0F};
+uint8_t FRAM_dataR[4];
 
 void divisor_byte(){
     eUSCIB0_CS1_set_state(1);
@@ -25,7 +25,7 @@ void divisor_byte(){
 }
 
 void FRAM_write(int ADDRESS_1,int ADDRESS_2,int ADDRESS_3,int Nbytes){
-    unsigned int i;
+    uint8_t i;
     eUSCIB0_CS1_set_state(0); //CS LOW
     eUSCIB0_SPI_writeByte(WREN);
     eUSCIB0_CS1_set_state(1);
@@ -42,7 +42,7 @@ void FRAM_write(int ADDRESS_1,int ADDRESS_2,int ADDRESS_3,int Nbytes){
 }
 
 void FRAM_read(int ADDRESS_1,int ADDRESS_2,int ADDRESS_3,int Nbytes){
-    unsigned int i;
+    uint8_t i;
     eUSCIB0_CS1_set_state(0);
     eUSCIB0_SPI_writeByte(READ);
     eUSCIB0_SPI_writeByte(ADDRESS_1);

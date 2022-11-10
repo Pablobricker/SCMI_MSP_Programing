@@ -1,6 +1,6 @@
 #include <msp430.h>
-int eUSCIA0_UART_availableData = 0;
-int eUSCIA0_UART_data = 0;
+uint8_t eUSCIA0_UART_availableData = 0;
+uint8_t eUSCIA0_UART_data = 0;
 
 /*
  * Módulo utilizado: eUSCIA0 (ver SLAU367P-october 2012-Revised April 2020, pp 767)

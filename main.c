@@ -14,6 +14,7 @@ uint8_t dataX[4];
 
 
 
+
 void receivePrincipalComputerData(){
     uint8_t dataCheck;
     uint8_t checksum;
@@ -39,6 +40,7 @@ void receivePrincipalComputerData(){
 
 int main(void)
 {
+
 	WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
 	//PM5CTL0 &= ~LOCKLPM5;
 

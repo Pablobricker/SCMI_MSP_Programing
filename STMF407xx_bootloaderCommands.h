@@ -19,8 +19,8 @@
 uint32_t complement_command;
 uint32_t command_dataRx[NumDataRx];
 uint32_t dataW[]={0x10,0x15,0x22,0x33};
-unsigned int i;
-int ACK;
+static unsigned int i;
+static int ACK;
 
 void P1_Init(){
     PM5CTL0 &= ~LOCKLPM5;   //Disable the GPIO power-on default high-impedance mode
@@ -40,7 +40,7 @@ int BootloaderAccess(void){
     return ACK;
 }
 
-void sendCommand(int command){
+static void sendCommand(int command){
 
     complement_command = ~command;
 
@@ -54,12 +54,12 @@ void sendCommand(int command){
 }
 
 
-void receiveCommand_dataRx(){
+static void receiveCommand_dataRx(){
     for (i=0;i<=NumDataRx-1;i++)
         command_dataRx[NumDataRx-1-i] = eUSCIA1_UART_receiveACK_eerase();
 }
 
-void send_startAddress(int ADDRESS_MSB,int ADDRESS_LSB){
+static void send_startAddress(int ADDRESS_MSB,int ADDRESS_LSB){
     //Esta  funcion es identica a send_4bytes_wChecksum()
     //Para ver como funciona ver funciona ver send_4bytes_wChecksum()
     int ADDRESS_1 = (ADDRESS_MSB & 0x0000FF00) >> 8;
@@ -80,7 +80,7 @@ void send_startAddress(int ADDRESS_MSB,int ADDRESS_LSB){
     ACK = eUSCIA1_UART_receive();
 }
 
-void send_4bytes_wChecksum(int WORD_MSB,int WORD_LSB){
+static void send_4bytes_wChecksum(int WORD_MSB,int WORD_LSB){
     /*Ejemplo: Para enviar la palabra de 4 bytes WORD = 0x80706050
      * WORD_MSB = 0x8070
      * WORD_LSB = 0x6050
@@ -104,7 +104,7 @@ void send_4bytes_wChecksum(int WORD_MSB,int WORD_LSB){
     ACK = eUSCIA1_UART_receive();
 }
 
-void writeData (int NBYTES){
+static void writeData (int NBYTES){
     ACK = 0;
     int checksum = dataW[0] ^ dataW[1] ^ dataW[2] ^ dataW[3] ^ NBYTES; //Obtiene cheksum de los datos a escribir
     for (i = 0;i<=NBYTES;i++)

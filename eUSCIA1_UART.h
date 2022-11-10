@@ -1,7 +1,7 @@
 #include <msp430.h>
 
-int eUSCIA1_UART_availableData = 0;
-int eUSCIA1_UART_data = 0;
+uint8_t eUSCIA1_UART_availableData = 0;
+uint8_t eUSCIA1_UART_data = 0;
 
 void eUSCIA1_UART_Init(){
     //Configura puertos.
