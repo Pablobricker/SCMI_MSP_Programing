@@ -1,7 +1,7 @@
 #include <msp430.h>
 
 
-#define NumDataRx 4
+
 
 #define GET                 0x00
 #define GET_V_RPS           0x01
@@ -17,8 +17,7 @@
 #define GET_CHEKSUM         0xA1
 
 uint32_t complement_command;
-uint32_t command_dataRx[NumDataRx];
-uint32_t dataW[]={0x10,0x15,0x22,0x33};
+
 static unsigned int i;
 static int ACK;
 
@@ -54,9 +53,10 @@ static void sendCommand(int command){
 }
 
 
-static void receiveCommand_dataRx(){
-    for (i=0;i<=NumDataRx-1;i++)
-        command_dataRx[NumDataRx-1-i] = eUSCIA1_UART_receiveACK_eerase();
+static void receiveCommand_dataRx(uint32_t* arrayRx2, int arrayRxSize2){
+    arrayRx2 = arrayRx2+arrayRxSize2-1;
+    for (i=0;i<=arrayRxSize2-1;i++)
+        *(arrayRx2-i) = eUSCIA1_UART_receiveACK_eerase();   //*(array-1-i)
 }
 
 static void send_startAddress(int ADDRESS_MSB,int ADDRESS_LSB){
@@ -67,7 +67,8 @@ static void send_startAddress(int ADDRESS_MSB,int ADDRESS_LSB){
     int ADDRESS_3 = (ADDRESS_LSB & 0x0000FF00) >> 8;
     int ADDRESS_4 = (ADDRESS_LSB & 0x000000FF);
 
-    int checksum = ADDRESS_1 ^ ADDRESS_2 ^ ADDRESS_3 ^ ADDRESS_4;
+    int checksum = ADDRESS_1 ^ ADDRESS_2 ^ ADDRESS_3 ^ ADDRESS_4;   // Checksum Nota de boot loader de STM32
+                                                    //
 
 
     eUSCIA1_UART_send(ADDRESS_1);
@@ -104,16 +105,22 @@ static void send_4bytes_wChecksum(int WORD_MSB,int WORD_LSB){
     ACK = eUSCIA1_UART_receive();
 }
 
-static void writeData (int NBYTES){
+static void writeData (uint32_t* arrayTx2, int arrayTxSize2){
+    int j;
     ACK = 0;
-    int checksum = dataW[0] ^ dataW[1] ^ dataW[2] ^ dataW[3] ^ NBYTES; //Obtiene cheksum de los datos a escribir
-    for (i = 0;i<=NBYTES;i++)
-        eUSCIA1_UART_send(dataW[i]); //Env�a los datos a escribir
+    //int checksum = dataW[0] ^ dataW[1] ^ dataW[2] ^ dataW[3] ^ NBYTES; //Obtiene cheksum de los datos a escribir
+    //int checksum = 23;
+    int checksum=0;
+    for (j=0;j<=arrayTxSize2;j++)
+        checksum= checksum ^ *(arrayTx2+j);
+    checksum = checksum ^ ((arrayTxSize2)&0xFF);
+    for (i = 0;i<=arrayTxSize2;i++)
+        eUSCIA1_UART_send(*(arrayTx2+i)); //Env�a los datos a escribir
     eUSCIA1_UART_send(checksum); //Env�a checksum
     ACK = eUSCIA1_UART_receive(); //Espera bit de Acknowledge
 }
 
-void userSendCommand(int command){
+void userSendCommand(int command,uint32_t* arrayRx, int arrayRxSize){
    /*Esta funci�n sirve para los comandos
     * - Get command
     * - Get version & Read Protection Status command
@@ -126,11 +133,11 @@ void userSendCommand(int command){
 
    sendCommand(command); //Envia el comando
    if (ACK == 0x79){
-       receiveCommand_dataRx(); //Recibe respuesta del microcontrolador principal.
+       receiveCommand_dataRx(arrayRx, arrayRxSize); //Recibe respuesta del microcontrolador principal.
    }
 }
 
-void readMemoryCommand(int ADDRESS_MSB,int ADDRESS_LSB, int NBYTES){
+void readMemoryCommand(int ADDRESS_MSB,int ADDRESS_LSB,uint32_t* arrayRx, int arrayRxSize){
     //NBYTES: n�mero de bytes a leer.
     //Ejemplo: lectura de 4 bytes NBYTES = 4;
     //NBYTES = NBYTES-1; //El dato que se tiene que enviar al principal es NBYTES-1
@@ -138,30 +145,30 @@ void readMemoryCommand(int ADDRESS_MSB,int ADDRESS_LSB, int NBYTES){
     if (ACK == 0x79){ //Espera  bit de acknowledge
         send_startAddress(ADDRESS_MSB,ADDRESS_LSB); //Direccion de inicio
         if (ACK == 0x79){
-            eUSCIA1_UART_send(NBYTES); //Numero de bytes a leer
-            eUSCIA1_UART_send(~NBYTES); //Env�a checksum
+            eUSCIA1_UART_send(arrayRxSize); //Numero de bytes a leer
+            eUSCIA1_UART_send(~arrayRxSize); //Env�a checksum
             ACK = eUSCIA1_UART_receiveACK_eerase(); //Espera Acknowledge para posteriormente recibir los datos
                                             //Se utiliza esta funci�n ya que el principal se tarda en
                                             //mandar el acknowledge.
             if (ACK == 0x79){
-                receiveCommand_dataRx(); //Si todas los pasos fueron correctos se reciben los datos.
+                receiveCommand_dataRx(arrayRx, arrayRxSize); //Si todas los pasos fueron correctos se reciben los datos.
             }
         }
     }
 }
 
 
-void writeMemoryCommand(int ADDRESS_MSB,int ADDRESS_LSB,int NBYTES){
+void writeMemoryCommand(int ADDRESS_MSB,int ADDRESS_LSB,uint32_t* arrayTx, int arrayTxSize){
     //NBYTES: n�mero de bytes a escribir.
     //Ejemplo: lectura de 4 bytes NBYTES = 4;
-    NBYTES = NBYTES-1;//El dato que se tiene que enviar al principal es NBYTES-1
+    arrayTxSize = arrayTxSize-1;//El dato que se tiene que enviar al principal es NBYTES-1
     sendCommand(WRITE_MEMORY);//Env�a el comando de lectura de memoria
 
     if(ACK == 0x79){//Espera bit de acknowledge
         send_startAddress(ADDRESS_MSB,ADDRESS_LSB); //env�a direcci�n de inicio.
         if (ACK == 0x79){//Espera bit de acknowlegde
-            eUSCIA1_UART_send(NBYTES); //Numero de bytes a escribir
-            writeData(NBYTES);
+            eUSCIA1_UART_send(arrayTxSize); //Numero de bytes a escribir
+            writeData(arrayTx, arrayTxSize);
         }
     }
 }
@@ -196,7 +203,7 @@ void eeraseCommand(int FlashSectorCode){
 void getChecksumCommand(int ADDRESS_MSB,int ADDRESS_LSB,
                         int WORD32b_MSB,int WORD32b_LSB,
                         int CRCpolynomial_MSB, int CRCpolynomial_LSB,
-                        int CRCinitialValue_MSB, int CRCinitialValue_LSB)
+                        int CRCinitialValue_MSB, int CRCinitialValue_LSB,uint32_t* arrayRx, int arrayRxSize)
 {
     sendCommand(GET_CHEKSUM); //Env�a el comando GET_checksum
     if (ACK == 0x79){   //Evalua bit de acknowledge.
@@ -208,7 +215,7 @@ void getChecksumCommand(int ADDRESS_MSB,int ADDRESS_LSB,
                 if(ACK == 0x79){ //Evalua bit de ackwonledge
                     send_4bytes_wChecksum(CRCinitialValue_MSB, CRCpolynomial_LSB);
                     if(ACK == 0x79){ //Evalua bit de acknowledge
-                        receiveCommand_dataRx(); //Si todos los datos son correctos recibe checksum.
+                        receiveCommand_dataRx(arrayRx, arrayRxSize); //Si todos los datos son correctos recibe checksum.
                     }
                 }
             }

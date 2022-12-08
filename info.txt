@@ -11,6 +11,8 @@ P1.7 <-> MISO
 P2.2 <-> CLK
 P1.2 <-> CS
 
+Delicados con el alambrado
+
 
 Info: La versión 2 (v2) contiene la integración de todos los
 avances hasta el momento (09SEP2022) funciona correctamente

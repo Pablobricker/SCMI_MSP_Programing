@@ -2,6 +2,9 @@
 #include <stdint.h>
 
 uint8_t dataX[4];
+#define NumDataRx 4
+uint32_t command_dataRx[NumDataRx];              //Aqui antes estaban declarados como uint32_t
+uint32_t dataW[]={0x10,0x17,0x22,0x33};
 
 #include <TIMERA0.h>
 #include <eUSCIA1_UART.h>
@@ -66,10 +69,27 @@ int main(void)
     //FRAM_read(0x02, 0x00, 0x00, 4); //Lee 4 bytes de la direcci�n 0x00000
     //x = 5;
 
+
+
+
+        int FRAM_dataW[]={0x10,0x20,0x30,0x40};
+            int FRAM_WdataSize = sizeof(FRAM_dataW)/sizeof(FRAM_dataW[0]);  //sizeof(FRAM_dataW/FRAM_dataW[0]);
+            uint16_t FRAM_dataR[4];
+            int FRAM_RdataSize = sizeof(FRAM_dataR)/sizeof(FRAM_dataR[0]);  //sizeof(FRAM_dataR/FRAM_dataR[0]);
+            //FRAM_RdataSize =4;
+
+
+            eUSCIB0_SPI_init();
+            FRAM_erase(0x00,0x90,0x00,4);
+            //FRAM_write(0x00,0x90,0x00,FRAM_dataW,FRAM_WdataSize);
+            FRAM_read(0x00,0x90,0x00,FRAM_dataR,FRAM_RdataSize); //Escribe 4 bytes en la localidad 0x00000
+//
+    static int NumDataTx = sizeof(dataW)/sizeof(dataW[0]);     //sizeof(dataW/dataW[0]); sizeof(dataW);
+
     ACK = BootloaderAccess();
-    eeraseCommand(0);
-    //writeMemoryCommand(0x0800,0x1960, 4); //Escribe 0x05,0x08,0x2,0x03 en la 0x080E0000
-    //readMemoryCommand(0x0800,0x1900, 4);
+    eeraseCommand(11);
+    //writeMemoryCommand(0x080E,0x0000,dataW,NumDataTx); //Escribe 0x05,0x08,0x2,0x03 en la 0x080E0000
+    //readMemoryCommand(0x080E,0x0000,command_dataRx,NumDataRx);
     goCommand(0x0800, 0x0000);
 
     while(1){
