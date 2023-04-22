@@ -1,8 +1,12 @@
 #include <msp430.h>
 
+//Drivers para comunicacion UART con la memoria Flash del UC maestro
+//Notas de aplicacion AN3155 y AN2606
+//https://stm32duinoforum.com/forum/resource/en/application_note/cd00264342.pdf
+//https://www.st.com/resource/en/application_note/cd00167594-stm32-microcontroller-system-memory-boot-mode-stmicroelectronics.pdf
 
 
-
+//Lista de comandos Nota AN3155 (p.7)
 #define GET                 0x00
 #define GET_V_RPS           0x01
 #define GET_ID              0x02
@@ -21,12 +25,16 @@ uint32_t complement_command;
 static unsigned int i;
 static int ACK;
 
+//Puerto encargado de establecer los niveles para los pines de acceso al bootloader
 void P1_Init(){
     PM5CTL0 &= ~LOCKLPM5;   //Disable the GPIO power-on default high-impedance mode
     P1DIR |= BIT0 | BIT3 | BIT4 | BIT5;
     P1OUT |= BIT5;  //Reset siempre esta en alto.
 }
 
+//Metodo de acceso a Bootloader
+//Nota AN2606 (p.127)
+//Patron 1 (p.29)
 int BootloaderAccess(void){
     P1OUT = BIT3;    //Se realiza la secuencia de bootloader y reset.
     timer_Wait_ms(500);
@@ -137,6 +145,8 @@ void userSendCommand(int command,uint32_t* arrayRx, int arrayRxSize){
    }
 }
 
+//Metodo de lectura de memoria Flash
+//Nota AN3155 (p.13)
 void readMemoryCommand(int ADDRESS_MSB,int ADDRESS_LSB,uint32_t* arrayRx, int arrayRxSize){
     //NBYTES: n�mero de bytes a leer.
     //Ejemplo: lectura de 4 bytes NBYTES = 4;
@@ -157,7 +167,8 @@ void readMemoryCommand(int ADDRESS_MSB,int ADDRESS_LSB,uint32_t* arrayRx, int ar
     }
 }
 
-
+//Metodo de escritura a memoria Flash
+//Nota AN3155 (p.18)
 void writeMemoryCommand(int ADDRESS_MSB,int ADDRESS_LSB,uint32_t* arrayTx, int arrayTxSize){
     //NBYTES: n�mero de bytes a escribir.
     //Ejemplo: lectura de 4 bytes NBYTES = 4;
@@ -173,6 +184,8 @@ void writeMemoryCommand(int ADDRESS_MSB,int ADDRESS_LSB,uint32_t* arrayTx, int a
     }
 }
 
+//Metodo de salto a direccion para ejecucion de instrucciones
+//Nota AN3155 (p.16)
 void goCommand(int ADDRESS_MSB,int ADDRESS_LSB){
     sendCommand(GO); //Env�a el comando por UART.
     if (ACK == 0x79) //Espera bit de acknowledge
@@ -186,6 +199,8 @@ void goCommand(int ADDRESS_MSB,int ADDRESS_LSB){
  * @param FlashSectorCode codigo del sector de memoria a borrar
  */
 
+//Metodo de borrado de memoria Flash
+//Nota AN3155 (p.21)
 void eeraseCommand(int FlashSectorCode){
     sendCommand(E_ERASE);  //Env�a el comando de extended erase
 
