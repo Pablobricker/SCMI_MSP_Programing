@@ -52,6 +52,7 @@ uint8_t update_Code_frame_ready = 0;        //Indica si un frame de datos termin
 
 uint16_t FRAM_WRT_PTR = 0x0000;             //Puntero global movil para la escritura en FRAM
 uint16_t StartFRAM_ProgramAddress = 0x0000; //Puntero de la primera localidad en FRAM para lectura del programa
+#define StartFlash_ProgramAddress 0x08060000
 uint8_t ready_frames_count = 0;             //Conteo de las tramas recibidas de PC
                                             //Sirve para saber cuando parar de leer el programa almacenado en FRAM
 
@@ -158,10 +159,10 @@ void masterReprogramationRutine(uint32_t FRAM_initialAddress, uint32_t Flash_ini
 
         uint16_t BFFSZ_HX;  //Numero datos formato 16-bit
             FRAM_read(((FRAM_actualAddress)>>16)&0xFF,((FRAM_actualAddress)>>8)&0xFF, FRAM_actualAddress&0xFF,&BFFSZ_HX, 1);
-            FRAM_actualAddress++;
+            //FRAM_actualAddress++;
             int BufferVectorSize = (int) BFFSZ_HX;  //Numero de datos formato int
 
-        FRAM_read(((FRAM_actualAddress)>>16)&0xFF,((FRAM_actualAddress)>>8)&0xFF, FRAM_actualAddress & 0xFF, FRAM2MSP_VB, BufferVectorSize);
+        FRAM_read(((FRAM_actualAddress)>>16)&0xFF,((FRAM_actualAddress)>>8)&0xFF, FRAM_actualAddress & 0xFF, FRAM2MSP_VB, BufferVectorSize+2);
         //Ejecutar alguna rutina para verificar la integridad de los datos (No se tiene que desarrollar ahora).
         //Hacer la conversion de 16 a 8 bits para que se puedan enviar bien los datos
         //Para mas optimizazion modificar las funciones de escritura y lectura de la FRAM a 8 bits
@@ -169,13 +170,15 @@ void masterReprogramationRutine(uint32_t FRAM_initialAddress, uint32_t Flash_ini
 
         //Conversion de formato para compatibilidad con el UART del maestro 16-->8-bit
         unsigned int j;
-        for (j=0; j<=BufferVectorSize; j++){
+        for (j=0; j<=BufferVectorSize+2; j++){
             MSP2Master_VB[j] = FRAM2MSP_VB[j]&0xFF;}
-
-        //Escritura UART hacia la Flash
-        writeMemoryCommand(((Flash_actualAddress)>>16)&0xFFFF,(Flash_actualAddress)&0xFFFF , MSP2Master_VB, BufferVectorSize);
-        FRAM_actualAddress = FRAM_actualAddress + BufferVectorSize+1;       //El +1 es para saltar el checksum
+        if (Frame_Verify_Checksum(MSP2Master_VB) == 1){
+            //Escritura UART hacia la Flash
+        writeMemoryCommand(((Flash_actualAddress)>>16)&0xFFFF,(Flash_actualAddress)&0xFFFF , MSP2Master_VB+1, BufferVectorSize);
+        FRAM_actualAddress = FRAM_actualAddress + BufferVectorSize+2;       //El +2 es para saltar el checksum y el numero de datos
         Flash_actualAddress = Flash_actualAddress + BufferVectorSize;
+        }
+        else {i=i-1;}
     }
 
 }
@@ -311,7 +314,7 @@ int main(void)
                     if (ready_frames_count == 4){       //Aqui se puede cambiar de bandera para reprogramar el UC maestro con otro evento
                         //Asi debe estar para reprogramar en la direccion indicada por el hexfile
                         //masterReprogramationRutine(0x00000000,Each_Frame_address[0],ready_frames_count); //<------------------------------
-                        masterReprogramationRutine(0x00000000,0x08060000,ready_frames_count);  
+                        masterReprogramationRutine(0x00000000,StartFlash_ProgramAddress,ready_frames_count);  
                     }
 
                     eUSCIA0_UART_send(ACK_BYTE);
