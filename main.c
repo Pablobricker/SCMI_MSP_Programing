@@ -1,5 +1,6 @@
 #include <msp430.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "eUSCIA1_UART.h"
 #include "STMF407xx_bootloaderCommands.h"
 #include "eUSCIB0_SPI.h"
@@ -172,7 +173,7 @@ void masterReprogramationRutine(uint32_t FRAM_initialAddress, uint32_t Flash_ini
         unsigned int j;
         for (j=0; j<=BufferVectorSize+2; j++){
             MSP2Master_VB[j] = FRAM2MSP_VB[j]&0xFF;}
-        if (Frame_Verify_Checksum(MSP2Master_VB) == 1){
+        if (Frame_Verify_Checksum(MSP2Master_VB,false) == 1){
             //Escritura UART hacia la Flash
         writeMemoryCommand(((Flash_actualAddress)>>16)&0xFFFF,(Flash_actualAddress)&0xFFFF , MSP2Master_VB+1, BufferVectorSize);
         FRAM_actualAddress = FRAM_actualAddress + BufferVectorSize+2;       //El +2 es para saltar el checksum y el numero de datos
@@ -225,14 +226,22 @@ void LED_Toggle(){
     P1OUT ^= BIT0;
 }
 
-uint8_t Frame_Verify_Checksum(uint8_t data[]){
+uint8_t Frame_Verify_Checksum(uint8_t data[], bool in_nout){
     uint8_t i = 0;
     uint8_t local_checksum = 0;
     uint8_t received_checksum = 0;
+    if(in_nout){
     for(i = 0; i<= data[0]+2; i++){
         local_checksum ^=  data[i];
     }
     received_checksum = data[data[0]+3];
+    }
+    else{
+        for(i = 0; i<= data[0]; i++){
+                local_checksum ^=  data[i];
+            }
+            received_checksum = data[data[0]+1];
+    }
     if(local_checksum == received_checksum){
         return 1;
     }else{
@@ -301,7 +310,7 @@ int main(void)
     while(1){
         if(update_Code_enable == 1){        
             if(update_Code_frame_ready == 1){
-                if(Frame_Verify_Checksum(update_Code_Buffer) == 1){
+                if(Frame_Verify_Checksum(update_Code_Buffer,true) == 1){
                     ready_frames_count++;
                     //Split_Vector(ready_frames_count);
 
@@ -314,7 +323,7 @@ int main(void)
                     if (ready_frames_count == 4){       //Aqui se puede cambiar de bandera para reprogramar el UC maestro con otro evento
                         //Asi debe estar para reprogramar en la direccion indicada por el hexfile
                         //masterReprogramationRutine(0x00000000,Each_Frame_address[0],ready_frames_count); //<------------------------------
-                        masterReprogramationRutine(0x00000000,StartFlash_ProgramAddress,ready_frames_count);  
+                        masterReprogramationRutine(0x00000000,StartFlash_ProgramAddress,ready_frames_count);
                     }
 
                     eUSCIA0_UART_send(ACK_BYTE);
