@@ -45,17 +45,25 @@
 #define ACK_BYTE 0x79               //Byte ACK para comunicacion MSP-->maestro
 #define NACK_BYTE 0x7F              //Byte NACK para comunicacion con el maestro
 
-uint8_t update_Code_Buffer[SIZE_BUFFER];    //Buffer Global de datos recibidos de PC
+uint8_t update_Code_Buffer[SIZE_BUFFER] = {0};    //Buffer Global de datos recibidos de PC
 uint8_t update_Code_Byte_Count = 0;         //Indice de bytes para el llenado del buffer global
 uint8_t update_Code_first_Byte = 1;         //
+uint8_t update_Code_end_Byte = 0;           //Indica que la terminal completo la carga del software a la FRAM
 uint8_t update_Code_enable = 0;             //Indica en la rutina main que se han empezado a recibir datos para reprogramacion
 uint8_t update_Code_frame_ready = 0;        //Indica si un frame de datos termino de recibirse 
 
+//LAS LIMITACIONES DEL MSP MAS QUE RENDIMIENTO ES DE EL TAMAÑO DEL BUS DE DATOS PARA MANEJAR UN MAYOR NUMERO DE BYTES SEGUN EL PROGRAMA XDz
 uint16_t FRAM_WRT_PTR = 0x0000;             //Puntero global movil para la escritura en FRAM
-uint16_t StartFRAM_ProgramAddress = 0x0000; //Puntero de la primera localidad en FRAM para lectura del programa
-#define StartFlash_ProgramAddress 0x08060000
-uint8_t ready_frames_count = 0;             //Conteo de las tramas recibidas de PC
+uint16_t StartFRAM_ProgramAddress = 0x0000; //Puntero de la primera localidad en FRAM para lectura del program
+#define StartFlash_ProgramAddress 0x0000 //0x08060000 Sector 6 (configurable) dividir la direccion
+#define Flash_Begin 0x0800
+                                            //Apuntador truncado a 16 bits
+                                            //Eso dice que solo podemos escribir 64 kbytes de memoria en flash
+                                            //Sector 0 al 3
+uint16_t ready_frames_count = 0;             //Conteo de las tramas recibidas de PC
                                             //Sirve para saber cuando parar de leer el programa almacenado en FRAM
+                                            //66535 frames
+                                            //total de 2 MBytes
 
 uint8_t frame_1[25] = {0};
 uint8_t frame_2[25] = {0};
@@ -101,7 +109,7 @@ void FRAM_REPROG(uint8_t* Global_Buffer){
 
     //Conversion del tipo de dato para escritura en FRAM
     
-    int MSP2FRAMvB[25]; //Buffer local de datos para escritura en FRAM 
+    int MSP2FRAMvB[100]; //Buffer local de datos para escritura en FRAM
                         //La longitud inicial del buffer debe ser mayor al numero de datos
                         //Ya con eso no hay pdos
     int j;
@@ -116,11 +124,21 @@ void FRAM_REPROG(uint8_t* Global_Buffer){
     *datos
     *checksum de datos calculado
     */
+    /*
     FRAM_write((FRAM_WRT_PTR>>16)&0xFF,(FRAM_WRT_PTR>>8)&0xFF,FRAM_WRT_PTR&0xFF,&nByt,1);
     FRAM_WRT_PTR++;
     FRAM_write((FRAM_WRT_PTR>>16)&0xFF,(FRAM_WRT_PTR>>8)&0xFF,FRAM_WRT_PTR&0xFF,MSP2FRAMvB,nByt);
     FRAM_WRT_PTR=FRAM_WRT_PTR +nByt;
     FRAM_write((FRAM_WRT_PTR>>16)&0xFF,(FRAM_WRT_PTR>>8)&0xFF,FRAM_WRT_PTR&0xFF,&data_chksum,1);
+    FRAM_WRT_PTR++;
+    */
+
+
+    FRAM_write(0x00,(FRAM_WRT_PTR>>8)&0xFF,FRAM_WRT_PTR&0xFF,&nByt,1);
+    FRAM_WRT_PTR++;
+    FRAM_write(0x00,(FRAM_WRT_PTR>>8)&0xFF,FRAM_WRT_PTR&0xFF,MSP2FRAMvB,nByt);
+    FRAM_WRT_PTR=FRAM_WRT_PTR +nByt;
+    FRAM_write(0x00,(FRAM_WRT_PTR>>8)&0xFF,FRAM_WRT_PTR&0xFF,&data_chksum,1);
     FRAM_WRT_PTR++;
 }
 
@@ -144,26 +162,27 @@ void masterReprogramationRutine(uint32_t FRAM_initialAddress, uint32_t Flash_ini
 
     //Esta funcion asume que el respaldo del programa del master ya ha sido cargado en la FRAM.
 
-    uint16_t FRAM2MSP_VB[25]; //Vector de Buffer de FRAM ---> MSP
-    uint8_t MSP2Master_VB[25];//Vector de Buffer de MSP ---> Master
+    uint16_t FRAM2MSP_VB[100]; //Vector de Buffer de FRAM ---> MSP
+    uint8_t MSP2Master_VB_CHK[100];//Vector de Buffer de MSP ---> Master
                                 //Truncados a 25 bytes
+    uint32_t MSP2Master_VB[100];//Vector de Buffer de MSP ---> Master
 
     //int FRAMvectorBufferSize = sizeof(FRAMvectorBuffer)/sizeof(FRAMvectorBuffer[0]);
     unsigned int i;
 
-    
+
     ACK= BootloaderAccess();
-    eeraseCommand(7);       //Region de Flash para hacer pruebas (sector 7 0x08060000) en la nucleo F446RE
+    eeraseCommand(0);       //Region de Flash para hacer pruebas (sector 7 0x08060000) en la nucleo F446RE
 
     for (i=0; i<Rx_ready_buffers; i++){
         //Lectura de frames almacenados en FRAM
 
         uint16_t BFFSZ_HX;  //Numero datos formato 16-bit
-            FRAM_read(((FRAM_actualAddress)>>16)&0xFF,((FRAM_actualAddress)>>8)&0xFF, FRAM_actualAddress&0xFF,&BFFSZ_HX, 1);
+            FRAM_read(0x00,((FRAM_actualAddress)>>8)&0xFF, FRAM_actualAddress&0xFF,&BFFSZ_HX, 1);
             //FRAM_actualAddress++;
             int BufferVectorSize = (int) BFFSZ_HX;  //Numero de datos formato int
 
-        FRAM_read(((FRAM_actualAddress)>>16)&0xFF,((FRAM_actualAddress)>>8)&0xFF, FRAM_actualAddress & 0xFF, FRAM2MSP_VB, BufferVectorSize+2);
+        FRAM_read(0x00,((FRAM_actualAddress)>>8)&0xFF, FRAM_actualAddress & 0xFF, FRAM2MSP_VB, BufferVectorSize+2);
         //Ejecutar alguna rutina para verificar la integridad de los datos (No se tiene que desarrollar ahora).
         //Hacer la conversion de 16 a 8 bits para que se puedan enviar bien los datos
         //Para mas optimizazion modificar las funciones de escritura y lectura de la FRAM a 8 bits
@@ -172,10 +191,12 @@ void masterReprogramationRutine(uint32_t FRAM_initialAddress, uint32_t Flash_ini
         //Conversion de formato para compatibilidad con el UART del maestro 16-->8-bit
         unsigned int j;
         for (j=0; j<=BufferVectorSize+2; j++){
-            MSP2Master_VB[j] = FRAM2MSP_VB[j]&0xFF;}
-        if (Frame_Verify_Checksum(MSP2Master_VB,false) == 1){
+                    MSP2Master_VB_CHK[j] = FRAM2MSP_VB[j]&0xFF;}
+        if (Frame_Verify_Checksum(MSP2Master_VB_CHK,false) == 1){
+            for (j=0; j<=BufferVectorSize; j++){
+                        MSP2Master_VB[j] = MSP2Master_VB_CHK[j+1];}
             //Escritura UART hacia la Flash
-        writeMemoryCommand(((Flash_actualAddress)>>16)&0xFFFF,(Flash_actualAddress)&0xFFFF , MSP2Master_VB+1, BufferVectorSize);
+        writeMemoryCommand(0x0800,(Flash_actualAddress)&0xFFFF , MSP2Master_VB, BufferVectorSize);
         FRAM_actualAddress = FRAM_actualAddress + BufferVectorSize+2;       //El +2 es para saltar el checksum y el numero de datos
         Flash_actualAddress = Flash_actualAddress + BufferVectorSize;
         }
@@ -237,7 +258,7 @@ uint8_t Frame_Verify_Checksum(uint8_t data[], bool in_nout){
     received_checksum = data[data[0]+3];
     }
     else{
-        for(i = 0; i<= data[0]; i++){
+        for(i = 0; i<= data[0]; i++){//Asi si toma en cuenta el numero de datos para el calculo del checksum
                 local_checksum ^=  data[i];
             }
             received_checksum = data[data[0]+1];
@@ -317,14 +338,14 @@ int main(void)
                     //Almacenar programa recibido en FRAM
                     FRAM_REPROG(update_Code_Buffer);
                     //Se vacia el buffer global para actualizar al siguiente frame
-                    for(i = 0;i <= 25; i++){
+                    for(i = 0;i <= 33; i++){
                             update_Code_Buffer[i] = 0;
                         }
-                    if (ready_frames_count == 4){       //Aqui se puede cambiar de bandera para reprogramar el UC maestro con otro evento
+                   /* if (ready_frames_count == 4){       //Aqui se puede cambiar de bandera para reprogramar el UC maestro con otro evento
                         //Asi debe estar para reprogramar en la direccion indicada por el hexfile
                         //masterReprogramationRutine(0x00000000,Each_Frame_address[0],ready_frames_count); //<------------------------------
                         masterReprogramationRutine(0x00000000,StartFlash_ProgramAddress,ready_frames_count);
-                    }
+                    }*/
 
                     eUSCIA0_UART_send(ACK_BYTE);
                 }else{
@@ -335,6 +356,11 @@ int main(void)
             }
         }else{
             //Reset de las variables de control y apuntadores
+            if(ready_frames_count > 0){
+                if(update_Code_end_Byte==1){
+                masterReprogramationRutine(0x0000,StartFlash_ProgramAddress,ready_frames_count);
+                goCommand(0x0800,0x0000);}
+            }
             ready_frames_count = 0;
             FRAM_WRT_PTR = 0x0000;
         }
@@ -366,13 +392,14 @@ __interrupt void USCI_A0_ISR(void){
            update_Code_first_Byte = 1;
            UCA0TXBUF = ACK_BYTE;
            update_Code_enable = 0; //Deshabilita reprogramaci�n
+           update_Code_end_Byte = 1;
         }else{//Si el primer byte no es el byte de inicio o el byte de fin, entonces es un dato.
             update_Code_first_Byte = 0;
             update_Code_Buffer[update_Code_Byte_Count] = start_byte_received;
             update_Code_Byte_Count++;
         }
     }else{
-        update_Code_Buffer[update_Code_Byte_Count] = UCA0RXBUF;
+        update_Code_Buffer[update_Code_Byte_Count] = UCA0RXBUF; //Termina de llenar el buffer con los demas datos de la trama
         update_Code_Byte_Count++;
         if(update_Code_Byte_Count == 4 + update_Code_Buffer[0]){
             update_Code_Byte_Count = 0;
@@ -380,6 +407,9 @@ __interrupt void USCI_A0_ISR(void){
             update_Code_first_Byte = 1;
         }
     }
+    //if(ready_frames_count==14){
+      //  LED_Toggle();
+    //}
 }
 
 

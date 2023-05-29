@@ -79,6 +79,7 @@ void FRAM_read(int ADDRESS_1,int ADDRESS_2,int ADDRESS_3,uint16_t* arrayRx, int 
     eUSCIB0_CS1_set_state(1);
 }
 //Funcion de borrado es la funcion de escritura que escribe ceros
+//las transmisiones son de 8 bits
 void FRAM_erase(int ADDRESS_1,int ADDRESS_2,int ADDRESS_3,int Nbytes){
     unsigned int i;
     eUSCIB0_CS1_set_state(0); //CS LOW

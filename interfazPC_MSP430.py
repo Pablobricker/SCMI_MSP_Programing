@@ -51,7 +51,7 @@ def translate_IntelHex_Line(vector):
 
     return data
 
-relativa = "STM32_HAL_DMA.hex"
+relativa = "STM32_BLINKY.hex"
 archivo = open(relativa,"r")
 prueba =[]
 error = 0
@@ -79,7 +79,7 @@ serialInst.stopbits = STOPBITS_ONE
 serialInst.port = portVar
 serialInst.open()
 
-Tx_Delay = 0.1 #in seconds
+Tx_Delay = 0.005 #in seconds pobe 1ms
 startByte = 15 #0x0F
 endByte = 240  #0xF0 
 ackByte = 121 #0x79
