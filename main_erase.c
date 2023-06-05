@@ -94,15 +94,15 @@ main(){
         eUSCIA1_UART_Init();        //Habilita comunicacion UART para conectar con Flash
         eUSCIB0_SPI_init();         //Habilita comunicacion SPI para conectar con FRAM
 
-       //ACK = BootloaderAccess();
+       ACK = BootloaderAccess();
 
-       //eeraseCommand(0);
+       eeraseCommand(0);
 
        //FRAM_erase(0x00,0x00,0x00,2000);
         //FRAM_read(0x00,0x3B,0xBF,REad_Bff,40);//09
-        //FRAM_read(0x00,0x00,0x22,REad_Bff,34);
+        FRAM_read(0x00,0x04,0xA6,REad_Bff,34);
         //FRAMREPROG guarda un cheksum que toma en calculo el numero de datos, no solo los datos
-        masterReprogramationRutine(0x0000,0x0000,36);//mandar solo los primeros 16 bits a pesar de que diga que soporta de 32 bits
-        goCommand(0x0800,0x0000);
+        //masterReprogramationRutine(0x0000,0x0000,36);//mandar solo los primeros 16 bits a pesar de que diga que soporta de 32 bits
+        //goCommand(0x0800,0x0000);
         while(1);
 }
